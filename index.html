@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="An interactive web prototype simulating an antigravity effect on UI elements using HTML, CSS, and basic JavaScript.">
+  <title>Antigravity.io | Interactive Physics Dashboard</title>
+  
+  <!-- Google Fonts for premium typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================
+       1. Design System & CSS custom properties
+       ========================================== */
+    :root {
+      --bg-dark: #07070d;
+      --bg-gradient: radial-gradient(circle at 50% 50%, #14142b 0%, #06060c 100%);
+      --card-bg: rgba(18, 18, 36, 0.45);
+      --card-bg-hover: rgba(28, 28, 54, 0.6);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-active: rgba(168, 85, 247, 0.4);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      
+      /* Glowing Accent Colors */
+      --accent-purple: #c084fc;
+      --accent-purple-glow: rgba(192, 132, 252, 0.4);
+      --accent-cyan: #22d3ee;
+      --accent-cyan-glow: rgba(34, 211, 238, 0.4);
+      --accent-emerald: #34d399;
+      --accent-emerald-glow: rgba(52, 211, 153, 0.4);
+      --accent-rose: #f43f5e;
+      --accent-rose-glow: rgba(244, 63, 94, 0.4);
+      
+      --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      --glow-purple: 0 0 20px 0 var(--accent-purple-glow);
+    }
+
+    /* ==========================================
+       2. Base Reset & Layout
+       ========================================== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none; /* Prevents text selection while dragging elements */
+    }
+
+    body {
+      background: var(--bg-dark);
+      background-image: var(--bg-gradient);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      min-height: 100vh;
+      overflow: hidden; /* Hide scrollbars when elements float off-screen */
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 2rem;
+    }
+
+    /* Background Particle Canvas */
+    #space-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Outer Container */
+    .app-container {
+      width: 100%;
+      max-width: 1200px;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      padding-bottom: 120px; /* Space for the bottom control deck */
+    }
+
+    /* Header styling */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 1.5rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-mark {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 1.5rem;
+      box-shadow: var(--glow-purple);
+      animation: logoPulse 3s ease-in-out infinite;
+    }
+
+    @keyframes logoPulse {
+      0%, 100% { transform: scale(1); filter: brightness(1); }
+      50% { transform: scale(1.05); filter: brightness(1.2); }
+    }
+
+    .brand-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      background: linear-gradient(to right, #ffffff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      padding: 0.5rem 1rem;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      backdrop-filter: blur(10px);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--accent-emerald);
+      box-shadow: 0 0 8px var(--accent-emerald-glow);
+    }
+
+    .status-dot.floating {
+      background-color: var(--accent-purple);
+      box-shadow: 0 0 8px var(--accent-purple-glow);
+      animation: blink 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes blink {
+      0% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+
+    /* ==========================================
+       3. Dashboard Grid & Cards
+       ========================================== */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      width: 100%;
+    }
+
+    @media (max-width: 900px) {
+      .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Core gravity element class */
+    .gravity-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-glass);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+      cursor: grab;
+      position: relative;
+      z-index: 10;
+      will-change: transform; /* Hint to browser to hardware accelerate */
+    }
+
+    /* Hover effect in Normal state */
+    .gravity-card:hover {
+      background-color: var(--card-bg-hover);
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.45);
+    }
+
+    .gravity-card:active {
+      cursor: grabbing;
+    }
+
+    /* Special style when an element is dragged or floating */
+    .gravity-card.floating-active {
+      border-color: var(--card-border-active);
+      box-shadow: 0 12px 40px 0 rgba(168, 85, 247, 0.25);
+    }
+
+    .gravity-card.is-dragged {
+      z-index: 100;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 15px 50px 0 rgba(34, 211, 238, 0.4);
+      transform: scale(1.03) !important; /* Visual cue when being held */
+    }
+
+    /* smooth returning transition applied via JS when resetting */
+    .gravity-card.returning {
+      transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1) !important;
+    }
+
+    /* Card Contents */
+    .card-title {
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-title h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .card-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Visual Components Inside Cards */
+    
+    /* Profile card elements */
+    .profile-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-rose));
+      padding: 3px;
+    }
+
+    .avatar-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: #1e1e38;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .profile-details h3 {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .profile-details p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .profile-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      padding: 0.75rem;
+    }
+
+    .stat-val {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent-purple);
+    }
+
+    .stat-lbl {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    /* Analytics Chart (SVG Line Chart) */
+    .chart-container {
+      position: relative;
+      height: 110px;
+      width: 100%;
+      margin-bottom: 0.5rem;
+    }
+
+    .chart-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Interactive Inputs Card */
+    .form-group {
+      margin-bottom: 0.75rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      color: var(--text-main);
+      font-family: var(--font-family);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-input:focus {
+      border-color: var(--accent-purple);
+    }
+
+    .form-slider {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    .form-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--accent-cyan);
+    }
+
+    /* Text block card */
+    .card-text {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+
+    .highlight-gradient {
+      background: linear-gradient(to right, var(--accent-purple), var(--accent-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 700;
+    }
+
+    /* Actions Button Card */
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.50rem;
+    }
+
+    .action-btn {
+      padding: 0.75rem;
+      border-radius: 10px;
+      border: 1px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      font-weight: 500;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: background 0.2s, border-color 0.2s, transform 0.1s;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .action-btn:active {
+      transform: scale(0.97);
+    }
+
+    /* Radial Progress Card */
+    .radial-progress-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0.5rem 0;
+    }
+
+    .radial-svg {
+      width: 80px;
+      height: 80px;
+      transform: rotate(-90deg);
+    }
+
+    .radial-bg {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.05);
+      stroke-width: 8;
+    }
+
+    .radial-fill {
+      fill: none;
+      stroke: url(#cyan-purple-grad);
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-dasharray: 226;
+      stroke-dashoffset: 68; /* Shows 70% progress */
+    }
+
+    .radial-text {
+      font-size: 1.5rem;
+      font-weight: 800;
+      text-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+    }
+
+    /* ==========================================
+       4. Fixed Control Deck
+       ========================================== */
+    .control-deck {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 800px;
+      background: rgba(13, 14, 28, 0.7);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 1.25rem 2rem;
+      box-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.6);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+
+    @media (max-width: 768px) {
+      .control-deck {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1.5rem;
+      }
+    }
+
+    /* Physics Toggles */
+    .mode-selector {
+      display: flex;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.25rem;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .mode-btn {
+      padding: 0.6rem 1.2rem;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      font-family: var(--font-family);
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border-radius: 10px;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+
+    .mode-btn:hover {
+      color: var(--text-main);
+    }
+
+    .mode-btn.active {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+    }
+
+    /* Slider elements in control deck */
+    .sliders-panel {
+      display: flex;
+      gap: 1.5rem;
+      flex-grow: 1;
+    }
+
+    @media (max-width: 768px) {
+      .sliders-panel {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+
+    .deck-slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      flex-grow: 1;
+    }
+
+    .deck-slider-group label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .deck-slider-group label span {
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    /* Diagnostics indicators */
+    .diagnostics {
+      display: flex;
+      flex-direction: column;
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      gap: 0.2rem;
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      padding-left: 1rem;
+      min-width: 120px;
+    }
+
+    @media (max-width: 768px) {
+      .diagnostics {
+        border-left: none;
+        padding-left: 0;
+        flex-direction: row;
+        gap: 1.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 0.5rem;
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background Particle System Canvas -->
+  <canvas id="space-canvas"></canvas>
+
+  <div class="app-container">
+    
+    <!-- Header Area -->
+    <header>
+      <div class="brand">
+        <div class="logo-mark" id="logoMark">G</div>
+        <div>
+          <h1 class="brand-title">ANTIGRAVITY.IO</h1>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Interactive Physical UI Simulator</span>
+        </div>
+      </div>
+      <div class="status-badge" id="statusBadgeContainer">
+        <div class="status-dot" id="statusIndicatorDot"></div>
+        <span id="statusIndicatorText">Earth Gravity (1G)</span>
+      </div>
+    </header>
+
+    <!-- UI Mock Dashboard Grid (Floating Elements) -->
+    <main class="dashboard-grid" id="cardGrid">
+      
+      <!-- Card 1: Core Controls (Instructions) -->
+      <article class="gravity-card" id="card-welcome">
+        <div class="card-title">
+          <h2>Overview</h2>
+          <div class="card-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-purple)" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          </div>
+        </div>
+        <p class="card-text" style="margin-bottom: 0.75rem;">
+          Welcome to the sandbox. Under standard gravity, these UI cards exist in a static CSS grid flow. 
+        </p>
+        <p class="card-text">
+          Toggle <span class="highlight-gradient">Zero Gravity</span> or <span class="highlight-gradient">Reverse Gravity</span> below, and watch the UI layout collapse as cards drift, collide, and float.
+        </p>
+      </article>
+
+      <!-- Card 2: Profile Widget -->
+      <article class="gravity-card" id="card-profile">
+        <div class="card-title">
+          <h2>Commander Profile</h2>
+          <div class="card-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+        </div>
+        <div class="profile-info">
+          <div class="avatar">
+            <div class="avatar-inner">G</div>
+          </div>
+          <div class="profile-details">
+            <h3>Major Tom</h3>
+            <p>Space Pioneer</p>
+          </div>
+        </div>
+        <div class="profile-stats">
+          <div>
+            <div class="stat-val">34</div>
+            <div class="stat-lbl">Orbits</div>
+          </div>
+          <div>
+            <div class="stat-val">0G</div>
+            <div class="stat-lbl">Weight</div>
+          </div>
+          <div>
+            <div class="stat-val">8.2k</div>
+            <div class="stat-lbl">Flux</div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Card 3: Live Telemetry Line Chart -->
+      <article class="gravity-card" id="card-telemetry">
+        <div class="card-title">
+          <h2>Flux Telemetry</h2>
+          <div class="card-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-emerald)" stroke-width="2"><path d="M3 3v18h18"/><path d="m18.7 8-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+          </div>
+        </div>
+        <div class="chart-container">
+          <svg class="chart-svg" viewBox="0 0 200 80">
+            <defs>
+              <linearGradient id="chart-glow" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--accent-emerald)" stop-opacity="0.4"/>
+                <stop offset="100%" stop-color="var(--accent-emerald)" stop-opacity="0.0"/>
+              </linearGradient>
+            </defs>
+            <path d="M 0,60 Q 25,45 50,55 T 100,20 T 150,35 T 200,10 L 200,80 L 0,80 Z" fill="url(#chart-glow)" />
+            <path d="M 0,60 Q 25,45 50,55 T 100,20 T 150,35 T 200,10" fill="none" stroke="var(--accent-emerald)" stroke-width="2" stroke-linecap="round" />
+            <circle cx="100" cy="20" r="3" fill="#ffffff" stroke="var(--accent-emerald)" stroke-width="2"/>
+            <circle cx="200" cy="10" r="3" fill="#ffffff" stroke="var(--accent-emerald)" stroke-width="2"/>
+          </svg>
+        </div>
+        <p class="card-text" style="font-size: 0.75rem; text-align: right; color: var(--accent-emerald);">● Real-time telemetry feed</p>
+      </article>
+
+      <!-- Card 4: Quick Command Switches -->
+      <article class="gravity-card" id="card-switches">
+        <div class="card-title">
+          <h2>Ship Adjustments</h2>
+          <div class="card-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-rose)" stroke-width="2"><path d="M20 7H4M4 17h16"/><circle cx="8" cy="7" r="3"/><circle cx="16" cy="17" r="3"/></svg>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="input-thrusters">Engine Thrusters <span>(Hover Action)</span></label>
+          <input type="text" id="input-thrusters" class="form-input" placeholder="Secure Thrusters..." readonly value="Thrusters Online [100%]" style="cursor: default;">
+        </div>
+        <div class="form-group">
+          <label for="slider-energy-cell">Auxiliary Energy Cell</label>
+          <input type="range" id="slider-energy-cell" class="form-slider" min="1" max="100" value="78">
+        </div>
+      </article>
+
+      <!-- Card 5: Core Tasks Radial Load -->
+      <article class="gravity-card" id="card-radial">
+        <div class="card-title">
+          <h2>Decompression Rate</h2>
+          <div class="card-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-purple)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+        </div>
+        <div class="radial-progress-box">
+          <svg class="radial-svg">
+            <defs>
+              <linearGradient id="cyan-purple-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="var(--accent-cyan)" />
+                <stop offset="100%" stop-color="var(--accent-purple)" />
+              </linearGradient>
+            </defs>
+            <circle class="radial-bg" cx="40" cy="40" r="36"/>
+            <circle class="radial-fill" cx="40" cy="40" r="36"/>
+          </svg>
+          <div>
+            <div class="radial-text">70%</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">PSI Balance</div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Card 6: Interactive Action Grid -->
+      <article class="gravity-card" id="card-actions">
+        <div class="card-title">
+          <h2>Vessel Diagnostics</h2>
+          <div class="card-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          </div>
+        </div>
+        <div class="button-grid">
+          <button class="action-btn" id="btn-oxygen">
+            <span style="color: var(--accent-cyan);">O₂</span> Status
+          </button>
+          <button class="action-btn" id="btn-shield">
+            <span style="color: var(--accent-purple);">🛡️</span> Shield
+          </button>
+          <button class="action-btn" id="btn-comms">
+            <span style="color: var(--accent-emerald);">📡</span> Radio
+          </button>
+          <button class="action-btn" id="btn-jettison">
+            <span style="color: var(--accent-rose);">💥</span> Vent
+          </button>
+        </div>
+      </article>
+
+    </main>
+
+    <!-- Bottom Control Deck (Control Center) -->
+    <footer class="control-deck">
+      
+      <!-- Gravity Mode Selector -->
+      <div class="mode-selector">
+        <button class="mode-btn active" id="btnNormal">Earth (1G)</button>
+        <button class="mode-btn" id="btnFloat">Zero-G</button>
+        <button class="mode-btn" id="btnReverse">Reverse-G</button>
+      </div>
+
+      <!-- Environment Sliders -->
+      <div class="sliders-panel">
+        <div class="deck-slider-group">
+          <label for="speedSlider">Float Speed: <span id="speedVal">1.0x</span></label>
+          <input type="range" class="form-slider" id="speedSlider" min="0.2" max="3.0" step="0.1" value="1.0">
+        </div>
+        <div class="deck-slider-group">
+          <label for="rotSlider">Spin Multiplier: <span id="rotVal">1.0x</span></label>
+          <input type="range" class="form-slider" id="rotSlider" min="0" max="3.0" step="0.2" value="1.0">
+        </div>
+      </div>
+
+      <!-- Live Diagnostics -->
+      <div class="diagnostics">
+        <div>STATE: <span id="diagState" style="color: var(--accent-emerald);">NORMAL</span></div>
+        <div>BOUNCES: <span id="diagBounces" style="color: var(--accent-cyan);">0</span></div>
+        <div>SOUND: <span id="btnMute" style="color: var(--accent-cyan); cursor: pointer; font-weight: bold; border-bottom: 1px dashed var(--accent-cyan);">ON</span></div>
+        <div style="font-size: 0.65rem;">FPS: <span id="diagFps" style="color: var(--accent-purple);">60</span></div>
+      </div>
+
+    </footer>
+
+  </div>
+
+  <!-- =====================================================================
+       5. JavaScript Physics Engine, Interaction & Background Rendering
+       ===================================================================== -->
+  <script>
+    // --------------------------------------------------
+    // A. DOM Elements & State Configuration
+    // --------------------------------------------------
+    const spaceCanvas = document.getElementById('space-canvas');
+    const spaceCtx = spaceCanvas.getContext('2d');
+    
+    const cards = Array.from(document.querySelectorAll('.gravity-card'));
+    
+    // Control Deck Handles
+    const btnNormal = document.getElementById('btnNormal');
+    const btnFloat = document.getElementById('btnFloat');
+    const btnReverse = document.getElementById('btnReverse');
+    const speedSlider = document.getElementById('speedSlider');
+    const rotSlider = document.getElementById('rotSlider');
+    
+    const speedValLabel = document.getElementById('speedVal');
+    const rotValLabel = document.getElementById('rotVal');
+    
+    // Diagnostics Panel Handles
+    const diagStateText = document.getElementById('diagState');
+    const diagBouncesLabel = document.getElementById('diagBounces');
+    const diagFpsLabel = document.getElementById('diagFps');
+    const statusIndicatorDot = document.getElementById('statusIndicatorDot');
+    const statusIndicatorText = document.getElementById('statusIndicatorText');
+    const logoMark = document.getElementById('logoMark');
+    const btnMute = document.getElementById('btnMute');
+    let isMuted = false;
+
+    // Physics constants & configuration
+    let gravityMode = 'normal'; // 'normal' | 'zerog' | 'reverse'
+    let speedMultiplier = 1.0;
+    let rotationMultiplier = 1.0;
+    
+    let bounceCount = 0;
+    let frameCount = 0;
+    let fps = 60;
+    let lastFpsUpdateTime = performance.now();
+    let physicsLoopId = null;
+
+    // List to hold physical attributes of each floating card
+    let cardsPhysicsData = [];
+
+    // Drag-and-drop state tracker
+    let draggedElementData = null;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let mouseHistory = []; // Track displacement to compute release speed/throwing force
+
+    // --------------------------------------------------
+    // Sound Effects Synthesizer (Web Audio API)
+    // --------------------------------------------------
+    let audioCtx = null;
+
+    function initAudio() {
+      if (audioCtx) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) {
+        console.warn("Web Audio API not supported", e);
+      }
+    }
+
+    function playBounceSound(velocity) {
+      if (!audioCtx || isMuted) return;
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      try {
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        osc.type = 'sine';
+        const baseFreq = 80 + Math.min(velocity * 3, 100);
+        osc.frequency.setValueAtTime(baseFreq, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.12);
+
+        const volume = Math.min(velocity / 25, 0.3); 
+        gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.15);
+      } catch (e) {}
+    }
+
+    function playGravitySound(isZeroG) {
+      if (!audioCtx || isMuted) return;
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      try {
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        osc.type = 'triangle';
+        if (isZeroG) {
+          osc.frequency.setValueAtTime(90, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(280, audioCtx.currentTime + 0.4);
+        } else {
+          osc.frequency.setValueAtTime(280, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(90, audioCtx.currentTime + 0.4);
+        }
+
+        gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.005, audioCtx.currentTime + 0.4);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.45);
+      } catch (e) {}
+    }
+
+    // --------------------------------------------------
+    // B. Space Canvas Background (Twinkling Dust Stars)
+    // --------------------------------------------------
+    let stars = [];
+    const numStars = 65;
+
+    class StarParticle {
+      constructor() {
+        this.reset();
+        // Distribute stars randomly across screen on initial spawn
+        this.x = Math.random() * window.innerWidth;
+        this.y = Math.random() * window.innerHeight;
+      }
+
+      reset() {
+        this.x = Math.random() * window.innerWidth;
+        this.y = Math.random() * window.innerHeight;
+        this.radius = Math.random() * 1.5 + 0.5;
+        this.alpha = Math.random() * 0.7 + 0.3;
+        this.color = Math.random() > 0.5 ? 'rgba(34, 211, 238,' : 'rgba(192, 132, 252,'; // Cyan or Purple particles
+        
+        // Drift speeds
+        this.vx = (Math.random() - 0.5) * 0.2;
+        this.vy = (Math.random() - 0.5) * 0.2;
+      }
+
+      update() {
+        // Adjust background speed/direction depending on gravity mode
+        let currentVy = this.vy;
+        if (gravityMode === 'zerog') {
+          currentVy += (Math.random() - 0.5) * 0.05;
+        } else if (gravityMode === 'reverse') {
+          currentVy -= 0.15; // Dust falls upward in reverse gravity
+        }
+
+        this.x += this.vx * speedMultiplier;
+        this.y += currentVy * speedMultiplier;
+
+        // Wrap around boundaries
+        if (this.x < 0) this.x = window.innerWidth;
+        if (this.x > window.innerWidth) this.x = 0;
+        if (this.y < 0) this.y = window.innerHeight;
+        if (this.y > window.innerHeight) this.y = 0;
+
+        // Subtle alpha twinkling
+        this.alpha += (Math.random() - 0.5) * 0.05;
+        if (this.alpha < 0.1) this.alpha = 0.1;
+        if (this.alpha > 0.95) this.alpha = 0.95;
+      }
+
+      draw() {
+        spaceCtx.fillStyle = `${this.color}${this.alpha})`;
+        spaceCtx.beginPath();
+        spaceCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        spaceCtx.fill();
+      }
+    }
+
+    function initCanvas() {
+      spaceCanvas.width = window.innerWidth;
+      spaceCanvas.height = window.innerHeight;
+      stars = [];
+      for (let i = 0; i < numStars; i++) {
+        stars.push(new StarParticle());
+      }
+    }
+
+    // Handle viewport resize to reset canvas coordinate size
+    window.addEventListener('resize', () => {
+      spaceCanvas.width = window.innerWidth;
+      spaceCanvas.height = window.innerHeight;
+      // Re-capture element dimensions and positions when layout adjusts
+      if (gravityMode === 'normal') {
+        initializeCardsData();
+      } else {
+        // Just update widths and heights of elements for collision boundary accuracy
+        cardsPhysicsData.forEach(data => {
+          const rect = data.element.getBoundingClientRect();
+          data.width = rect.width;
+          data.height = rect.height;
+        });
+      }
+    });
+
+    // --------------------------------------------------
+    // C. Cards Physics Logic & Coordinates Setup
+    // --------------------------------------------------
+    function initializeCardsData() {
+      cardsPhysicsData = cards.map(element => {
+        // Fetch current document position layout details
+        const rect = element.getBoundingClientRect();
+        
+        return {
+          element: element,
+          x: 0,         // Cumulative horizontal translation offset (px)
+          y: 0,         // Cumulative vertical translation offset (px)
+          vx: 0,        // Horizontal velocity vector
+          vy: 0,        // Vertical velocity vector
+          angle: 0,     // Current orientation angle (degrees)
+          vAngle: 0,    // Angular rotation speed (deg/frame)
+          width: rect.width,
+          height: rect.height,
+          baseX: rect.left, // Screen layout position relative to view
+          baseY: rect.top,  // Screen layout position relative to view
+          isDragged: false,
+          elasticity: 0.75  // Bounce damping factor (energy remaining after hit)
+        };
+      });
+    }
+
+    // Refresh original offsets of elements when starting antigravity
+    function captureBasePositions() {
+      cardsPhysicsData.forEach(data => {
+        const rect = data.element.getBoundingClientRect();
+        
+        // Remove active transformations temporarily to find exact layout anchors
+        const currentTransform = data.element.style.transform;
+        data.element.style.transform = 'none';
+        
+        const rawRect = data.element.getBoundingClientRect();
+        data.baseX = rawRect.left;
+        data.baseY = rawRect.top;
+        data.width = rawRect.width;
+        data.height = rawRect.height;
+        
+        // Put the old transform back
+        data.element.style.transform = currentTransform;
+      });
+    }
+
+    // --------------------------------------------------
+    // D. Main Physics Simulation Loop
+    // --------------------------------------------------
+    function physicsLoop() {
+      // Clear space background
+      spaceCtx.clearRect(0, 0, spaceCanvas.width, spaceCanvas.height);
+      
+      // Update background particles
+      stars.forEach(star => {
+        star.update();
+        star.draw();
+      });
+
+      // Calculate FPS
+      frameCount++;
+      const now = performance.now();
+      if (now - lastFpsUpdateTime >= 1000) {
+        fps = frameCount;
+        diagFpsLabel.textContent = fps;
+        frameCount = 0;
+        lastFpsUpdateTime = now;
+      }
+
+      if (gravityMode !== 'normal') {
+        cardsPhysicsData.forEach(data => {
+          // Skip general update rules for elements currently being moved by user's pointer
+          if (data.isDragged) return;
+
+          // 1. Force Application (Zero-G vs Reverse Gravity)
+          if (gravityMode === 'zerog') {
+            // Apply drift/turbulence (Brownian simulation)
+            const driftForce = 0.05 * speedMultiplier;
+            data.vx += (Math.random() - 0.5) * driftForce;
+            data.vy += (Math.random() - 0.5) * driftForce;
+            
+            // Random tiny micro-rotation torque
+            data.vAngle += (Math.random() - 0.5) * 0.02 * rotationMultiplier;
+          } else if (gravityMode === 'reverse') {
+            // Reverse gravity pulls elements upward constant rate
+            const updraft = -0.15 * speedMultiplier;
+            data.vy += updraft;
+
+            // Micro-turbulence sideways
+            data.vx += (Math.random() - 0.5) * 0.06 * speedMultiplier;
+            data.vAngle += (Math.random() - 0.5) * 0.01 * rotationMultiplier;
+          }
+
+          // 2. Apply Air Resistance (Velocity Damping)
+          data.vx *= 0.985;
+          data.vy *= 0.985;
+          data.vAngle *= 0.985;
+
+          // Clamp velocities to prevent cards from moving too fast and breaking boundary collision checks
+          const maxVel = 20;
+          data.vx = Math.max(-maxVel, Math.min(maxVel, data.vx));
+          data.vy = Math.max(-maxVel, Math.min(maxVel, data.vy));
+
+          // 3. Coordinate Update
+          data.x += data.vx * speedMultiplier;
+          data.y += data.vy * speedMultiplier;
+          data.angle += data.vAngle * rotationMultiplier;
+
+          // 4. Boundary Collisions (Bouncing off Screen Edges)
+          const currentLeft = data.baseX + data.x;
+          const currentTop = data.baseY + data.y;
+          const currentRight = currentLeft + data.width;
+          const currentBottom = currentTop + data.height;
+
+          let bounced = false;
+
+          // Left border
+          if (currentLeft < 0) {
+            data.x = -data.baseX; // Push element back inside viewport
+            data.vx = -data.vx * data.elasticity;
+            // Generate spin torque from collision impact based on tangent speed
+            data.vAngle += data.vy * 0.08;
+            bounced = true;
+          }
+          // Right border
+          else if (currentRight > window.innerWidth) {
+            data.x = window.innerWidth - data.width - data.baseX;
+            data.vx = -data.vx * data.elasticity;
+            data.vAngle -= data.vy * 0.08;
+            bounced = true;
+          }
+
+          // Top border (Ceiling)
+          if (currentTop < 0) {
+            data.y = -data.baseY;
+            data.vy = -data.vy * data.elasticity;
+            data.vAngle -= data.vx * 0.08;
+            bounced = true;
+          }
+          // Bottom border (Floor)
+          else if (currentBottom > window.innerHeight) {
+            data.y = window.innerHeight - data.height - data.baseY;
+            data.vy = -data.vy * data.elasticity;
+            data.vAngle += data.vx * 0.08;
+            bounced = true;
+          }
+
+          if (bounced) {
+            bounceCount++;
+            diagBouncesLabel.textContent = bounceCount;
+            
+            // Calculate bounce intensity for sound synthesis
+            const speed = Math.sqrt(data.vx * data.vx + data.vy * data.vy);
+            playBounceSound(speed);
+            
+            // Limit angular velocity to avoid extreme spinning
+            const maxRotVel = 8;
+            data.vAngle = Math.max(-maxRotVel, Math.min(maxRotVel, data.vAngle));
+          }
+
+          // 5. Draw Transform style updates
+          data.element.style.transform = `translate3d(${data.x}px, ${data.y}px, 0px) rotate(${data.angle}deg)`;
+        });
+      }
+
+      // Schedule next rendering frame
+      physicsLoopId = requestAnimationFrame(physicsLoop);
+    }
+
+    // --------------------------------------------------
+    // E. Drag & Drop Mechanics
+    // --------------------------------------------------
+    
+    // Finds and returns the parent element having the card class
+    function getGravityCardParent(el) {
+      while (el && el !== document.body) {
+        if (el.classList.contains('gravity-card')) return el;
+        el = el.parentElement;
+      }
+      return null;
+    }
+
+    function handleDragStart(x, y, target) {
+      // Find the card container
+      const cardEl = getGravityCardParent(target);
+      if (!cardEl) return;
+
+      // Disable drag interaction on static interactive nodes (inputs/ranges)
+      const tagName = target.tagName.toLowerCase();
+      if (tagName === 'input' || tagName === 'button' || tagName === 'select' || tagName === 'textarea') {
+        return;
+      }
+
+      // Find the cached physics entry
+      const physicsData = cardsPhysicsData.find(data => data.element === cardEl);
+      if (!physicsData) return;
+
+      // If dragging is started in Earth Gravity, automatically switch system to Zero-G
+      if (gravityMode === 'normal') {
+        setGravityMode('zerog');
+      }
+
+      draggedElementData = physicsData;
+      draggedElementData.isDragged = true;
+      draggedElementData.element.classList.add('is-dragged');
+
+      // Calculate anchor distance relative to clicked target relative coordinate offset
+      dragOffsetX = x - (draggedElementData.baseX + draggedElementData.x);
+      dragOffsetY = y - (draggedElementData.baseY + draggedElementData.y);
+
+      // Reset displacement history
+      mouseHistory = [{ x, y, t: performance.now() }];
+    }
+
+    function handleDragMove(x, y) {
+      if (!draggedElementData) return;
+
+      // Update positions based on cursor delta
+      const nextX = x - dragOffsetX - draggedElementData.baseX;
+      const nextY = y - dragOffsetY - draggedElementData.baseY;
+
+      draggedElementData.x = nextX;
+      draggedElementData.y = nextY;
+
+      // Track drag coordinate updates for velocity history throwing
+      const now = performance.now();
+      mouseHistory.push({ x, y, t: now });
+      if (mouseHistory.length > 5) {
+        mouseHistory.shift(); // Keep history size small to represent immediate releases
+      }
+
+      // Live dragging update
+      draggedElementData.element.style.transform = `translate3d(${draggedElementData.x}px, ${draggedElementData.y}px, 0px) rotate(${draggedElementData.angle}deg)`;
+    }
+
+    function handleDragEnd() {
+      if (!draggedElementData) return;
+
+      draggedElementData.isDragged = false;
+      draggedElementData.element.classList.remove('is-dragged');
+
+      // Calculate release speed based on displacement history
+      if (mouseHistory.length >= 2) {
+        const oldest = mouseHistory[0];
+        const latest = mouseHistory[mouseHistory.length - 1];
+        const timeDiff = (latest.t - oldest.t) || 1; // avoid division by zero
+        
+        // Calculate speed (px/ms) and scale to px/frame (assuming 60 FPS = ~16.6ms per frame)
+        const frameMultiplier = 16.6; 
+        const deltaX = latest.x - oldest.x;
+        const deltaY = latest.y - oldest.y;
+        
+        draggedElementData.vx = (deltaX / timeDiff) * frameMultiplier;
+        draggedElementData.vy = (deltaY / timeDiff) * frameMultiplier;
+        
+        // Throw angle rotation force proportional to thrown sideways velocity
+        draggedElementData.vAngle = draggedElementData.vx * 0.15;
+      } else {
+        draggedElementData.vx = 0;
+        draggedElementData.vy = 0;
+      }
+
+      draggedElementData = null;
+    }
+
+    // Global Interaction Event Binding (Mouse & Touch compatible)
+    
+    // Mouse Events
+    window.addEventListener('mousedown', e => {
+      handleDragStart(e.clientX, e.clientY, e.target);
+    });
+
+    window.addEventListener('mousemove', e => {
+      handleDragMove(e.clientX, e.clientY);
+    });
+
+    window.addEventListener('mouseup', () => {
+      handleDragEnd();
+    });
+
+    // Touch Support (Mobile Compatibility)
+    window.addEventListener('touchstart', e => {
+      if (e.touches.length > 0) {
+        handleDragStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', e => {
+      if (e.touches.length > 0) {
+        handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => {
+      handleDragEnd();
+    });
+
+    // --------------------------------------------------
+    // F. Mode Swapping & Reset Smooth System
+    // --------------------------------------------------
+    function setGravityMode(mode) {
+      if (gravityMode === mode) return;
+      
+      const prevMode = gravityMode;
+      gravityMode = mode;
+
+      // Update UI buttons styling state
+      btnNormal.classList.toggle('active', mode === 'normal');
+      btnFloat.classList.toggle('active', mode === 'zerog');
+      btnReverse.classList.toggle('active', mode === 'reverse');
+
+      // Update Diagnostics Dashboard info text
+      diagStateText.textContent = mode.toUpperCase();
+      if (mode === 'normal') {
+        diagStateText.style.color = 'var(--accent-emerald)';
+        statusIndicatorDot.className = 'status-dot';
+        statusIndicatorText.textContent = 'Earth Gravity (1G)';
+        logoMark.style.animation = 'logoPulse 3s ease-in-out infinite';
+      } else if (mode === 'zerog') {
+        diagStateText.style.color = 'var(--accent-purple)';
+        statusIndicatorDot.className = 'status-dot floating';
+        statusIndicatorText.textContent = 'Zero Gravity Active';
+        logoMark.style.animation = 'logoPulse 0.5s ease-in-out infinite alternate';
+      } else {
+        diagStateText.style.color = 'var(--accent-rose)';
+        statusIndicatorDot.className = 'status-dot floating';
+        statusIndicatorText.style.color = 'var(--accent-rose)';
+        statusIndicatorText.textContent = 'Reverse Gravity Active';
+      }
+
+      if (mode === 'normal') {
+        playGravitySound(false);
+        // Transition back to natural grid structure
+        restoreEarthGravity();
+      } else {
+        playGravitySound(true);
+        // Break free from layout
+        cards.forEach(card => {
+          card.classList.remove('returning');
+          card.classList.add('floating-active');
+        });
+        
+        // If we were in normal gravity previously, make sure base positions are up-to-date
+        if (prevMode === 'normal') {
+          captureBasePositions();
+        }
+      }
+    }
+
+    // Handles the transition elements to animate smoothly back to static flow
+    function restoreEarthGravity() {
+      // 1. Temporarily pause loop updates while cards slide back
+      cardsPhysicsData.forEach(data => {
+        data.element.classList.add('returning');
+        data.element.classList.remove('floating-active');
+        
+        // Reset element inline transform back to zero
+        data.element.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+      });
+
+      // 2. Wait for transition duration (800ms) to clear active values
+      setTimeout(() => {
+        // Confirm user didn't switch back to another gravity mode mid-transition
+        if (gravityMode === 'normal') {
+          cardsPhysicsData.forEach(data => {
+            data.element.classList.remove('returning');
+            
+            // Reset numerical physics properties
+            data.x = 0;
+            data.y = 0;
+            data.vx = 0;
+            data.vy = 0;
+            data.angle = 0;
+            data.vAngle = 0;
+          });
+        }
+      }, 800);
+    }
+
+    // Button event bindings
+    btnNormal.addEventListener('click', () => setGravityMode('normal'));
+    btnFloat.addEventListener('click', () => setGravityMode('zerog'));
+    btnReverse.addEventListener('click', () => setGravityMode('reverse'));
+
+    // Range slider controls updates
+    speedSlider.addEventListener('input', e => {
+      speedMultiplier = parseFloat(e.target.value);
+      speedValLabel.textContent = `${speedMultiplier.toFixed(1)}x`;
+    });
+
+    rotSlider.addEventListener('input', e => {
+      rotationMultiplier = parseFloat(e.target.value);
+      rotValLabel.textContent = `${rotationMultiplier.toFixed(1)}x`;
+    });
+
+    // --------------------------------------------------
+    // G. App Core Launch
+    // --------------------------------------------------
+    function init() {
+      initCanvas();
+      initializeCardsData();
+      
+      // Start background rendering loop
+      physicsLoop();
+    }
+
+    // Audio Context Activation Trigger on first click/touch
+    window.addEventListener('click', initAudio, { once: true });
+    window.addEventListener('touchstart', initAudio, { once: true });
+
+    // Sound toggle listener
+    btnMute.addEventListener('click', () => {
+      isMuted = !isMuted;
+      if (isMuted) {
+        btnMute.textContent = 'OFF';
+        btnMute.style.color = 'var(--accent-rose)';
+        btnMute.style.borderBottomColor = 'var(--accent-rose)';
+      } else {
+        btnMute.textContent = 'ON';
+        btnMute.style.color = 'var(--accent-cyan)';
+        btnMute.style.borderBottomColor = 'var(--accent-cyan)';
+        initAudio();
+        playBounceSound(12);
+      }
+    });
+
+    // Start everything on content load
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
